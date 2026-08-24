@@ -1,0 +1,32 @@
+### Health Check Endpoint
+GET http://localhost:3000/health
+
+###
+
+### Send Jira Webhook POST Request to /webhook
+POST http://localhost:3000/webhook
+Content-Type: application/json
+
+{
+  "jiraWorkItemId": "DXP-33121"
+}
+
+###
+
+### Send Jira Webhook POST Request to /api/jira-webhook
+POST http://localhost:3000/api/jira-webhook
+Content-Type: application/json
+
+{
+  "jiraWorkItemId": "DXP-33121"
+}
+
+###
+
+### Send Jira Webhook POST Request to / (Root)
+POST http://localhost:3000/
+Content-Type: application/json
+
+{
+  "jiraWorkItemId": "DXP-33121"
+}

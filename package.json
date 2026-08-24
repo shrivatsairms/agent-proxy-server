@@ -1,0 +1,25 @@
+{
+  "name": "automation-proxy",
+  "version": "1.0.0",
+  "description": "Express proxy server for Jira Webhook to Cursor Automations",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "express",
+    "jira",
+    "webhook",
+    "cursor",
+    "proxy"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
