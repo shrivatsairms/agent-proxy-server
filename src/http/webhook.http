@@ -4,7 +4,7 @@ GET http://localhost:3000/health
 ###
 
 ### Send Jira Webhook POST Request to /webhook
-POST http://localhost:3000/webhook
+POST http://localhost:3000/webhook?code=123456
 Content-Type: application/json
 
 {
@@ -28,5 +28,5 @@ POST http://localhost:3000/
 Content-Type: application/json
 
 {
-  "jiraWorkItemId": "DXP-33121"
+  "jiraWorkItemId": "DXP-33123"
 }

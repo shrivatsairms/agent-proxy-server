@@ -1,0 +1,107 @@
+{
+  "timestamp": 1788191424367,
+  "webhookEvent": "comment_created",
+  "comment": {
+    "self": "https://irm-rmaas.atlassian.net/rest/api/2/issue/665663/comment/1363056",
+    "id": "1363056",
+    "author": {
+      "self": "https://irm-rmaas.atlassian.net/rest/api/2/user?accountId=712020%3A5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+      "accountId": "712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+      "avatarUrls": {
+        "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png"
+      },
+      "displayName": "Shrivatsa Shetty",
+      "active": true,
+      "timeZone": "America/New_York",
+      "accountType": "atlassian"
+    },
+    "body": "/cursor-coding-agent",
+    "updateAuthor": {
+      "self": "https://irm-rmaas.atlassian.net/rest/api/2/user?accountId=712020%3A5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+      "accountId": "712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+      "avatarUrls": {
+        "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+        "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png"
+      },
+      "displayName": "Shrivatsa Shetty",
+      "active": true,
+      "timeZone": "America/New_York",
+      "accountType": "atlassian"
+    },
+    "created": "2026-08-31T11:50:24.367-0400",
+    "updated": "2026-08-31T11:50:24.367-0400",
+    "jsdPublic": true
+  },
+  "issue": {
+    "id": "665663",
+    "self": "https://irm-rmaas.atlassian.net/rest/api/2/issue/665663",
+    "key": "TPAS-284",
+    "fields": {
+      "summary": "Add Subtraction Functionality to Calculator",
+      "issuetype": {
+        "self": "https://irm-rmaas.atlassian.net/rest/api/2/issuetype/10001",
+        "id": "10001",
+        "description": "Stories track functionality or features expressed as user goals.",
+        "iconUrl": "https://irm-rmaas.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+        "name": "Story",
+        "subtask": false,
+        "avatarId": 10315,
+        "hierarchyLevel": 0
+      },
+      "project": {
+        "self": "https://irm-rmaas.atlassian.net/rest/api/2/project/16842",
+        "id": "16842",
+        "key": "TPAS",
+        "name": "Test Project (Agentic SDLC) ",
+        "projectTypeKey": "software",
+        "simplified": false,
+        "avatarUrls": {
+          "48x48": "https://irm-rmaas.atlassian.net/rest/api/2/universal_avatar/view/type/project/avatar/10413",
+          "24x24": "https://irm-rmaas.atlassian.net/rest/api/2/universal_avatar/view/type/project/avatar/10413?size=small",
+          "16x16": "https://irm-rmaas.atlassian.net/rest/api/2/universal_avatar/view/type/project/avatar/10413?size=xsmall",
+          "32x32": "https://irm-rmaas.atlassian.net/rest/api/2/universal_avatar/view/type/project/avatar/10413?size=medium"
+        }
+      },
+      "assignee": {
+        "self": "https://irm-rmaas.atlassian.net/rest/api/2/user?accountId=712020%3A5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+        "accountId": "712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec",
+        "avatarUrls": {
+          "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+          "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+          "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png",
+          "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/initials/SS-0.png"
+        },
+        "displayName": "Shrivatsa Shetty",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://irm-rmaas.atlassian.net/rest/api/2/priority/3",
+        "iconUrl": "https://irm-rmaas.atlassian.net/images/icons/priorities/medium.svg",
+        "name": "Minor",
+        "id": "3"
+      },
+      "status": {
+        "self": "https://irm-rmaas.atlassian.net/rest/api/2/status/10158",
+        "description": "This status is managed internally by Jira Software",
+        "iconUrl": "https://irm-rmaas.atlassian.net/",
+        "name": "Ready for QA",
+        "id": "10158",
+        "statusCategory": {
+          "self": "https://irm-rmaas.atlassian.net/rest/api/2/statuscategory/4",
+          "id": 4,
+          "key": "indeterminate",
+          "colorName": "yellow",
+          "name": "In Progress"
+        }
+      }
+    }
+  },
+  "eventType": "primaryAction"
+}

@@ -1,0 +1,16 @@
+{
+  "host": "celibate-elm-credible.ngrok-free.dev",
+  "user-agent": "Atlassian Webhook HTTP Client",
+  "content-length": "4146",
+  "accept": "*/*",
+  "accept-encoding": "gzip,deflate",
+  "content-type": "application/json; charset=UTF-8",
+  "x-atlassian-webhook-flow": "Primary",
+  "x-atlassian-webhook-identifier": "5304091794460801108",
+  "x-b3-sampled": "0",
+  "x-b3-spanid": "42a8dea76601b1d0",
+  "x-b3-traceid": "c9af9c19ae1a554dba9d251672a24d3b",
+  "x-forwarded-for": "2401:1d80:321c:5:8d49:2c9f:5d02:c564",
+  "x-forwarded-host": "celibate-elm-credible.ngrok-free.dev",
+  "x-forwarded-proto": "https"
+}
