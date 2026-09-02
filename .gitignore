@@ -1,1 +1,4 @@
 node_modules/
+data/project-automations.json
+.env
+.DS_Store

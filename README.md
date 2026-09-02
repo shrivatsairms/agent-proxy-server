@@ -1,77 +1,111 @@
 # Jira Webhook Proxy Server
 
-An Express-based proxy server that listens for POST requests triggered by Jira Webhooks (containing payloads like `{"jiraWorkItemId": "DXP-123"}`) and forwards them to the Cursor Automation Webhook endpoint (`https://api2.cursor.sh/automations/webhook/db5d8c6c-9d82-11f1-a7d1-d6b4613131ce`) with the required `Authorization: Bearer <TOKEN>` header.
+POC Express proxy between Jira webhooks and Cursor Automations. Jira cannot set a Bearer token or a custom POST body, so this server inspects each webhook, looks up the project’s automation in a JSON mapping file, and forwards a small authenticated payload.
+
+Inbound authentication, WAF allowlists, and JSON body-size limits are deferred. Do not expose this POC on the public internet without those controls.
 
 ## Features
 
-- **Express Server**: Receives POST requests on `/webhook`, `/api/jira-webhook`, or `/`.
-- **Environment Configuration**: Fetches Bearer token from `CURSOR_AUTH_TOKEN` environment variable.
-- **Detailed Logging**: Logs incoming Jira webhook payloads, outgoing requests, downstream responses, and error conditions.
-- **Robust Error Handling**: Gracefully handles missing environment variables, invalid JSON, and downstream network errors.
-- **Automated Tests**: Unit and integration test coverage using Node.js test runner.
+- Dedicated endpoints for comment, assignment, and status webhooks
+- Project-to-automation mapping loaded from JSON (stand-in for a later Mongo collection)
+- Slim outbound payload (issue key, project, trigger) instead of the full Jira body
+- Terminal logs for live monitoring of receive, qualify, invoke, and skip paths
 
 ## Prerequisites
 
-- **Node.js**: v18.0.0 or higher (v26.4.0 tested)
-- **npm**: v9.0.0 or higher
+- Node.js v18 or higher
+- npm v9 or higher
 
-## Setup Instructions
+## Setup
 
-1. **Install Dependencies**:
-   ```bash
-   npm install --cache /tmp/npm-cache
-   ```
-
-2. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` or set your environment variables directly:
-   ```bash
-   cp .env.example .env
-   ```
-
-   Update `.env` with your secret Cursor authorization token:
-   ```env
-   PORT=3000
-   CURSOR_AUTH_TOKEN=crsr_7...33
-   CURSOR_WEBHOOK_URL=https://api2.cursor.sh/automations/webhook/db5d8c6c-9d82-11f1-a7d1-d6b4613131ce
-   ```
-
-## Running the Server
-
-### Development Mode (with auto-reload)
 ```bash
-npm run dev
+npm install
+cp .env.example .env
+cp data/project-automations.example.json data/project-automations.json
 ```
 
-### Production Mode
+Edit `data/project-automations.json` with real automation URLs and Bearer tokens:
+
+```json
+[
+  {
+    "projectId": "16842",
+    "projectKey": "TPAS",
+    "automationId": "abcd",
+    "automationWebhookUrl": "https://api.sh2.cursor.com/v1/abcd",
+    "automationBearerToken": "crsr_123"
+  }
+]
+```
+
+`.env` only holds process settings:
+
+```env
+PORT=3000
+PROJECT_AUTOMATIONS_FILE=./data/project-automations.json
+CURSOR_REQUEST_TIMEOUT_MS=15000
+```
+
+## Run
+
 ```bash
+npm run dev
 npm start
 ```
 
-## Testing the Endpoint
+## Jira webhook URLs
 
-### 1. Health Check
+Configure three Jira webhooks against this host:
+
+| Event | JQL (as configured in Jira) | Endpoint |
+|---|---|---|
+| Comment command | `issuetype in (Story, Bug) AND comment ~ "/cursor-coding-agent"` | `POST /api/slash-commands` |
+| Assigned to Cursor | assignee/create JQL for the Cursor bot | `POST /api/assignment` |
+| Ready for Dev | labels + status changed to Ready for Dev | `POST /api/status-changed` |
+
+Example:
+
+`https://<host>/api/assignment?issue-key={{issue.key}}&project-key={{project.key}}&project-id={{project.id}}`
+
+The proxy still reads issue and project identity from the JSON body when those fields are present.
+
+## Qualification rules
+
+All routes require issue type `Story` or `Bug`.
+
+- `/api/slash-commands`: `comment_created` and comment body contains `/cursor-coding-agent`
+- `/api/assignment`: created with assignee display name `Cursor`, or changelog assignee `toString` is `Cursor`
+- `/api/status-changed`: status changelog `toString` is `Ready for Dev` and labels include both `AI-Generated` and `bot-generated`
+
+Non-matching payloads return `202` with `forwarded: false` and do not call Cursor.
+
+## Health and sample curl
+
 ```bash
 curl http://localhost:3000/health
 ```
 
-### 2. Simulate Jira Webhook POST Request
 ```bash
-curl -X POST http://localhost:3000/webhook \
+curl -X POST "http://localhost:3000/api/slash-commands?issue-key=TPAS-284&project-key=TPAS&project-id=16842" \
   -H "Content-Type: application/json" \
-  -d '{"jiraWorkItemId": "DXP-123"}'
+  -d @api-requests/body-comment-added.json
 ```
 
-## Running Automated Tests
+The sample comment fixture uses `/cursor` and will be ignored. Use a comment body that includes `/cursor-coding-agent` to invoke an automation.
 
-Run the test suite using Node's native test runner:
+## Tests
+
 ```bash
 npm test
 ```
 
-## File Structure
+## Layout
 
-- [`src/app.js`](file:///Users/sashetty1/Workspace/AI-SDLC/Code-Sandbox/automation-proxy/src/app.js): Express application factory containing route definitions and request proxying logic.
-- [`src/index.js`](file:///Users/sashetty1/Workspace/AI-SDLC/Code-Sandbox/automation-proxy/src/index.js): Entry point initializing environment variables and listening on the server port.
-- [`src/http/webhook.http`](file:///Users/sashetty1/Workspace/AI-SDLC/Code-Sandbox/automation-proxy/src/http/webhook.http): HTTP test requests file compatible with VS Code REST Client & JetBrains HTTP Client.
-- [`test/server.test.js`](file:///Users/sashetty1/Workspace/AI-SDLC/Code-Sandbox/automation-proxy/test/server.test.js): Comprehensive test suite covering health check, proxy forwarding, token headers, error handling.
-- [`.env`](file:///Users/sashetty1/Workspace/AI-SDLC/Code-Sandbox/automation-proxy/.env): Local environment file holding credentials and configuration.
+- `src/app.js` — Express composition
+- `src/index.js` — process entry
+- `src/routes/` — HTTP routes
+- `src/controllers/` — request handling
+- `src/services/` — classification, mapping, Cursor `fetch`
+- `src/factories/` — slim outbound payload
+- `data/project-automations.example.json` — mapping shape
+- `data/project-automations.json` — local secrets (gitignored)

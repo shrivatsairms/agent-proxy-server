@@ -1,0 +1,9 @@
+[
+  {
+    "projectId": "16842",
+    "projectKey": "TPAS",
+    "automationId": "abcd",
+    "automationWebhookUrl": "https://api.sh2.cursor.com/v1/abcd",
+    "automationBearerToken": "crsr_123"
+  }
+]

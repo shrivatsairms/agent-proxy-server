@@ -1,32 +1,26 @@
-### Health Check Endpoint
+### Health check
 GET http://localhost:3000/health
 
-###
-
-### Send Jira Webhook POST Request to /webhook
-POST http://localhost:3000/webhook
+### Slash command webhook
+POST http://localhost:3000/api/slash-commands?issue-key=TPAS-284&project-id=16842&project-key=TPAS&triggeredByUser=712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec
 Content-Type: application/json
 
-{
-  "jiraWorkItemId": "DXP-33121"
-}
+< ../../api-requests/body-comment-added.json
 
-###
-
-### Send Jira Webhook POST Request to /api/jira-webhook
-POST http://localhost:3000/api/jira-webhook
+### Assignment webhook
+POST http://localhost:3000/api/assignment?issue-key=TPAS-284&project-id=16842&project-key=TPAS&triggeredByUser=712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec
 Content-Type: application/json
 
-{
-  "jiraWorkItemId": "DXP-33121"
-}
+< ../../api-requests/body-item-assigned.json
 
-###
-
-### Send Jira Webhook POST Request to / (Root)
-POST http://localhost:3000/
+### Created and assigned webhook
+POST http://localhost:3000/api/assignment?issue-key=TPAS-1251&project-id=16842&project-key=TPAS&triggeredByUser=712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec
 Content-Type: application/json
 
-{
-  "jiraWorkItemId": "DXP-33121"
-}
+< ../../api-requests/body-item-created-assigned.json
+
+### Status changed webhook
+POST http://localhost:3000/api/status-changed?issue-key=TPAS-284&project-id=16842&project-key=TPAS&triggeredByUser=712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec
+Content-Type: application/json
+
+< ../../api-requests/body-status-changed.json
