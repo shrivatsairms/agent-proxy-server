@@ -5,7 +5,8 @@ import {
 } from '../services/event-classifier.service.js';
 import { invokeCursorAutomation } from '../services/cursor-automation.service.js';
 import { buildCursorPayload, extractIssueKey, extractProject } from '../factories/cursor-payload.factory.js';
-import { DEFAULT_CURSOR_TIMEOUT_MS } from '../config/constants.js';
+import { buildFailureComment, buildSuccessComment } from '../factories/jira-comment.factory.js';
+import { CURSOR_AGENT_BASE_URL, DEFAULT_CURSOR_TIMEOUT_MS, TRIGGERS } from '../config/constants.js';
 import { log } from '../utils/logger.js';
 
 function timeoutMs() {
@@ -15,14 +16,191 @@ function timeoutMs() {
 
 function skipped(res, reason) {
 	log(`No automation invoked`);
+	// A valid but irrelevant Jira event is acknowledged so Jira need not retry it.
 	return res.status(202).json({
 		forwarded: false,
 		reason
 	});
 }
 
-export function createJiraWebhookController({ fetchImpl, mappingService }) {
-	async function handle(req, res, classifier) {
+function acknowledgementError(error) {
+	return error.status ? `${error.message} (status: ${error.status})` : error.message;
+}
+
+async function acknowledgeFailure(jiraCommentService, issueKey, author, description, status) {
+	if (!author?.accountId || !author?.displayName) {
+		throw new Error('Webhook comment author is missing');
+	}
+
+	log(`Posting error acknowledgement to Jira ticket ${issueKey}`);
+	const result = await jiraCommentService.addComment({
+		issueKey,
+		body: buildFailureComment(author, description, status)
+	});
+	log(`Error acknowledgement posted to Jira ticket ${issueKey}: ${result.status}`);
+}
+
+async function acknowledgeSuccess(jiraCommentService, issueKey, author, agentUrl) {
+	if (!author?.accountId || !author?.displayName) {
+		throw new Error('Webhook comment author is missing');
+	}
+
+	log(`Posting success acknowledgement to Jira ticket ${issueKey}`);
+	const result = await jiraCommentService.addComment({
+		issueKey,
+		body: buildSuccessComment(author, agentUrl)
+	});
+	log(`Success acknowledgement posted to Jira ticket ${issueKey}: ${result.status}`);
+}
+
+async function forwardToCursor({
+	res,
+	body,
+	issueKey,
+	classification,
+	mapping,
+	payload,
+	fetchImpl,
+	jiraCommentService
+}) {
+	const isSlashCommand = classification.trigger === TRIGGERS.COMMENT_COMMAND;
+	const author = body.comment?.author;
+
+	try {
+		const result = await invokeCursorAutomation({
+			fetchImpl,
+			mapping,
+			payload,
+			timeoutMs: timeoutMs()
+		});
+
+		log(`Automation ${mapping.automationId} responded ${result.status}`);
+
+		if (!result.ok) {
+			const description = `Cursor automation responded with status ${result.status}`;
+			return respondToCursorFailure({
+				res,
+				jiraCommentService,
+				isSlashCommand,
+				issueKey,
+				author,
+				description,
+				status: result.status,
+				automationId: mapping.automationId
+			});
+		}
+
+		if (!isSlashCommand) {
+			return res.status(200).json({
+				forwarded: true,
+				automationId: mapping.automationId,
+				status: result.status,
+				data: result.data
+			});
+		}
+
+		const agentId = result.data?.agentId;
+		if (!agentId) {
+			return respondToCursorFailure({
+				res,
+				jiraCommentService,
+				isSlashCommand,
+				issueKey,
+				author,
+				description: 'Cursor automation response did not include an agent ID',
+				status: result.status,
+				automationId: mapping.automationId
+			});
+		}
+
+		const agentUrl = `${CURSOR_AGENT_BASE_URL}/${encodeURIComponent(agentId)}`;
+		log(`Automation ${mapping.automationId} started agent ${agentId}`);
+
+		try {
+			await acknowledgeSuccess(jiraCommentService, issueKey, author, agentUrl);
+			return res.status(200).json({
+				forwarded: true,
+				acknowledged: true,
+				automationId: mapping.automationId,
+				agentId,
+				agentUrl,
+				status: result.status
+			});
+		} catch (error) {
+			log(`Failed to post success acknowledgement: ${acknowledgementError(error)}`);
+			return res.status(502).json({
+				forwarded: true,
+				acknowledged: false,
+				automationId: mapping.automationId,
+				agentId,
+				agentUrl,
+				error: 'Agent started but Jira acknowledgement failed',
+				details: acknowledgementError(error)
+			});
+		}
+	} catch (error) {
+		// AbortController reports timeouts as AbortError; expose a clearer operator message.
+		const message = error.name === 'AbortError' ? 'request timed out' : error.message;
+		log(`Failed to invoke automation ${mapping.automationId}: ${message}`);
+		return respondToCursorFailure({
+			res,
+			jiraCommentService,
+			isSlashCommand,
+			issueKey,
+			author,
+			description: message,
+			automationId: mapping.automationId
+		});
+	}
+}
+
+async function respondToCursorFailure({
+	res,
+	jiraCommentService,
+	isSlashCommand,
+	issueKey,
+	author,
+	description,
+	status,
+	automationId
+}) {
+	if (!isSlashCommand) {
+		return res.status(502).json({
+			forwarded: false,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description
+		});
+	}
+
+	try {
+		await acknowledgeFailure(jiraCommentService, issueKey, author, description, status);
+		return res.status(502).json({
+			forwarded: false,
+			acknowledged: true,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description
+		});
+	} catch (error) {
+		log(`Failed to post error acknowledgement: ${acknowledgementError(error)}`);
+		return res.status(502).json({
+			forwarded: false,
+			acknowledged: false,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description,
+			acknowledgementError: acknowledgementError(error)
+		});
+	}
+}
+
+export function createJiraWebhookController({ fetchImpl, mappingService, jiraCommentService }) {
+	// All webhook routes share orchestration while supplying their own classifier.
+	async function handle(req, res, classifier, jiraCommentService) {
 		try {
 			const endpoint = `${req.baseUrl}${req.path}`;
 			log(`Jira webhook received for endpoint ${endpoint}`);
@@ -46,6 +224,9 @@ export function createJiraWebhookController({ fetchImpl, mappingService }) {
 			if (!mapping) {
 				const reason = `No automation mapping for project ${project.projectKey || project.projectId || 'unknown'}`;
 				log(reason);
+				if (classification.trigger === TRIGGERS.COMMENT_COMMAND) {
+					await acknowledgeFailure(jiraCommentService, issueKey, body.comment?.author, reason);
+				}
 				return skipped(res, reason);
 			}
 
@@ -57,31 +238,16 @@ export function createJiraWebhookController({ fetchImpl, mappingService }) {
 				trigger: classification.trigger
 			});
 
-			try {
-				const result = await invokeCursorAutomation({
-					fetchImpl,
-					mapping,
-					payload,
-					timeoutMs: timeoutMs()
-				});
-
-				log(`Automation ${mapping.automationId} responded ${result.status}`);
-
-				return res.status(result.ok ? 200 : result.status).json({
-					forwarded: result.ok,
-					automationId: mapping.automationId,
-					status: result.status,
-					data: result.data
-				});
-			} catch (error) {
-				const message = error.name === 'AbortError' ? 'request timed out' : error.message;
-				log(`Failed to invoke automation ${mapping.automationId}: ${message}`);
-				return res.status(502).json({
-					error: 'Bad Gateway',
-					message: 'Failed to communicate with Cursor webhook service.',
-					details: message
-				});
-			}
+			return forwardToCursor({
+				res,
+				body,
+				issueKey,
+				classification,
+				mapping,
+				payload,
+				fetchImpl,
+				jiraCommentService
+			});
 		} catch (error) {
 			log(`Unhandled error: ${error.message}`);
 			return res.status(500).json({
@@ -92,8 +258,8 @@ export function createJiraWebhookController({ fetchImpl, mappingService }) {
 	}
 
 	return {
-		slashCommands: (req, res) => handle(req, res, classifySlashCommand),
-		assignment: (req, res) => handle(req, res, classifyAssignment),
-		statusChanged: (req, res) => handle(req, res, classifyStatusChanged)
+		slashCommands: (req, res) => handle(req, res, classifySlashCommand, jiraCommentService),
+		assignment: (req, res) => handle(req, res, classifyAssignment, jiraCommentService),
+		statusChanged: (req, res) => handle(req, res, classifyStatusChanged, jiraCommentService)
 	};
 }

@@ -15,6 +15,7 @@ export function loadApiRequest(fileName) {
 }
 
 export function clone(value) {
+	// Fixtures contain JSON-only data, so serialization provides a safe deep copy.
 	return JSON.parse(JSON.stringify(value));
 }
 
@@ -24,7 +25,7 @@ export function qualifiedCommentPayload() {
 	return payload;
 }
 
-export async function startApp({ fetchImpl, mappings = [TPAS_MAPPING] } = {}) {
+export async function startApp({ fetchImpl, jiraCommentService, mappings = [TPAS_MAPPING] } = {}) {
 	const mockFetch =
 		fetchImpl ||
 		(async () =>
@@ -35,10 +36,12 @@ export async function startApp({ fetchImpl, mappings = [TPAS_MAPPING] } = {}) {
 
 	const app = createApp({
 		fetch: (...args) => mockFetch(...args),
+		jiraCommentService,
 		mappings
 	});
 
 	const server = await new Promise((resolve) => {
+		// Port zero lets the OS isolate concurrently running test processes.
 		const instance = app.listen(0, () => resolve(instance));
 	});
 

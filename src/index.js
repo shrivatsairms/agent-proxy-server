@@ -8,6 +8,8 @@ dotenv.config();
 const PORT = process.env.PORT || 3000;
 
 let mappingService;
+
+// Fail at startup rather than accepting webhooks without usable routing data.
 try {
 	mappingService = createProjectMappingService();
 } catch (error) {

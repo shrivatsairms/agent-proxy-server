@@ -14,6 +14,7 @@ export function buildCursorPayload({ body = {}, query = {}, trigger }) {
 	const project = fields.project || {};
 
 	const payload = {
+		// Prefer Jira's canonical body fields; query parameters are fallback metadata.
 		issueKey: issue.key || query['issue-key'] || '',
 		issueId: issue.id || '',
 		projectKey: project.key || query['project-key'] || '',
@@ -27,6 +28,7 @@ export function buildCursorPayload({ body = {}, query = {}, trigger }) {
 		summary: fields.summary || ''
 	};
 
+	// Comments are the only trigger that needs user-provided command context.
 	if (trigger === TRIGGERS.COMMENT_COMMAND && typeof body.comment?.body === 'string') {
 		payload.command = truncateCommand(body.comment.body);
 	}

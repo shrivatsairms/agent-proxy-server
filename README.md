@@ -44,6 +44,9 @@ Edit `data/project-automations.json` with real automation URLs and Bearer tokens
 PORT=3000
 PROJECT_AUTOMATIONS_FILE=./data/project-automations.json
 CURSOR_REQUEST_TIMEOUT_MS=15000
+JIRA_BASE_URL=https://your-site.atlassian.net
+JIRA_EMAIL=service-account@example.com
+JIRA_API_TOKEN=your-jira-api-token
 ```
 
 ## Run
@@ -78,6 +81,16 @@ All routes require issue type `Story` or `Bug`.
 - `/api/status-changed`: status changelog `toString` is `Ready for Dev` and labels include both `AI-Generated` and `bot-generated`
 
 Non-matching payloads return `202` with `forwarded: false` and do not call Cursor.
+
+## Slash-command acknowledgement
+
+After Cursor starts an agent for `/api/slash-commands`, the proxy replies to the invocation comment with a tagged Jira mention and direct agent URL:
+
+`@[User] Agent successfully started and can be viewed by visiting the following URL: https://cursor.com/t/okta-grp-cursor-digital-gpt/agents/<agent-id>`
+
+The Cursor Automation response must include an `agentId`. The proxy uses Jira's Atlassian Document Format to create a real mention from the comment author's account ID, rather than a plain-text `@[User]` string.
+
+If Cursor cannot start the agent, the proxy posts a tagged error acknowledgement with a short reason and status code. The Jira service account needs permission to add comments to these issues.
 
 ## Health and sample curl
 

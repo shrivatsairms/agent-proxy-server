@@ -1,0 +1,48 @@
+---
+description: Add descriptive, appropriately sized comments on generated code; skip restating the obvious
+alwaysApply: true
+---
+
+# Comments on generated code
+
+When writing or changing code, add comments that explain **why**, constraints, or non-obvious behavior. Match comment length to the complexity of the nearby code. Do not comment every line or narrate what the syntax already shows.
+
+## Do
+
+- Comment routing decisions, fallbacks, timeouts, retries, and error-status choices.
+- Comment business rules (issue types, labels, assignee matching, trigger names).
+- Comment injection, mapping lookup order, and test helpers that exist for a specific reason.
+- Keep comments to one or two short sentences unless the block truly needs more.
+
+## Do not
+
+- Restate obvious assignments, returns, or standard Express/HTTP boilerplate.
+- Write long paragraphs above simple getters, constants whose names are already clear, or one-line wrappers.
+- Leave secrets, tokens, or full payloads in comments.
+
+## Examples
+
+```js
+// ❌ BAD — restates the code
+const PORT = process.env.PORT || 3000; // set the port
+
+// ✅ GOOD — skip; the names are enough
+const PORT = process.env.PORT || 3000;
+```
+
+```js
+// ❌ BAD — too long for a simple filter
+// Iterate every changelog item because Jira sometimes sends many fields...
+
+// ✅ GOOD — why the scan exists
+// Assignee may not be changelog.items[0]; search the full list.
+const assignedToCursor = changelogItems(body).some(
+	(item) => item.fieldId === 'assignee' && item.toString === CURSOR_DISPLAY_NAME
+);
+```
+
+```js
+// ✅ GOOD — non-obvious HTTP choice
+// 202: Jira delivered a valid event we intentionally do not forward.
+return res.status(202).json({ forwarded: false, reason });
+```

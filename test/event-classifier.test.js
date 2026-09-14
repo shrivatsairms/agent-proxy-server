@@ -15,7 +15,8 @@ describe('event classifier', () => {
 	});
 
 	test('ignores comments without the command substring', () => {
-		const payload = loadApiRequest('body-comment-added.json');
+		const payload = clone(loadApiRequest('body-comment-added.json'));
+		payload.comment.body = 'Please review this ticket';
 		const result = classifySlashCommand(payload);
 		assert.equal(result.qualified, false);
 		assert.match(result.reason, /comment missing/);

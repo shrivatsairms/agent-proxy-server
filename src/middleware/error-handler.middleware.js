@@ -1,6 +1,7 @@
 import { log } from '../utils/logger.js';
 
 export function errorHandler(err, req, res, next) {
+	// Delegate when another handler has already started streaming a response.
 	if (res.headersSent) {
 		return next(err);
 	}

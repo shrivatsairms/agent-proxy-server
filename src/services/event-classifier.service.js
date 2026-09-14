@@ -18,6 +18,7 @@ function isAllowedIssueType(body) {
 
 function changelogItems(body) {
 	const items = body?.changelog?.items;
+	// Jira may omit changelog or include multiple unrelated changes in one event.
 	return Array.isArray(items) ? items : [];
 }
 
@@ -28,6 +29,7 @@ function labels(body) {
 
 function hasRequiredLabels(body) {
 	const issueLabels = labels(body);
+	// The workflow requires both labels, not merely either label.
 	return REQUIRED_LABELS.every((label) => issueLabels.includes(label));
 }
 
@@ -62,6 +64,7 @@ export function classifyAssignment(body) {
 	}
 
 	if (body?.webhookEvent === WEBHOOK_EVENTS.ISSUE_UPDATED) {
+		// Search every changelog item because assignee changes are not guaranteed to be first.
 		const assignedToCursor = changelogItems(body).some(
 			(item) => item.fieldId === 'assignee' && item.toString === CURSOR_DISPLAY_NAME
 		);

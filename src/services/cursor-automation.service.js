@@ -15,6 +15,7 @@ export async function invokeCursorAutomation({
 	timeoutMs = DEFAULT_CURSOR_TIMEOUT_MS
 }) {
 	const controller = new AbortController();
+	// Abort stalled downstream calls so a webhook request cannot remain open indefinitely.
 	const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
 	try {
@@ -30,6 +31,7 @@ export async function invokeCursorAutomation({
 
 		const responseText = await response.text();
 		let responseData;
+		// Cursor may return either JSON or plain text depending on the outcome.
 		try {
 			responseData = JSON.parse(responseText);
 		} catch {
