@@ -99,7 +99,8 @@ async function forwardToCursor({
 			});
 		}
 
-		const agentId = result.data?.agentId;
+		const agentId = result.data?.backgroundComposerId;
+		
 		if (!agentId) {
 			return respondToCursorFailure({
 				res,
