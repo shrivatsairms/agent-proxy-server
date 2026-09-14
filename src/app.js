@@ -13,6 +13,7 @@ export function createApp(options = {}) {
 			filePath: options.mappingFilePath,
 			records: options.mappings
 		});
+	
 	const jiraCommentService =
 		options.jiraCommentService ||
 		createJiraCommentService({ fetchImpl: options.jiraFetch || globalThis.fetch });

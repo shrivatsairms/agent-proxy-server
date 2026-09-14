@@ -3,6 +3,8 @@ import { createApp } from './app.js';
 import { createProjectMappingService } from './services/project-mapping.service.js';
 import { log } from './utils/logger.js';
 
+/* Entry point of the app */
+
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
