@@ -32,3 +32,10 @@ export const CURSOR_AGENT_BASE_URL =
 	'https://cursor.com/t/okta-grp-cursor-digital-gpt/agents';
 
 export const DEFAULT_JIRA_TIMEOUT_MS = 10000;
+
+// Capture the first GitLab URL after repo=, including Jira wiki smart-link chips.
+export const GITLAB_REPO_ASSIGNMENT = /\brepo=\[?(https:\/\/gitlab\.com\/[^|\s\]]+)/i;
+
+// Project roots need a namespace plus a project name; optional trailing slash.
+export const GITLAB_REPO_ROOT =
+	/^https:\/\/gitlab\.com\/(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+\/?$/i;

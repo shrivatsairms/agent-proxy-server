@@ -2,8 +2,23 @@
   {
     "projectId": "16842",
     "projectKey": "TPAS",
-    "automationId": "abcd",
-    "automationWebhookUrl": "https://api.sh2.cursor.com/v1/abcd",
-    "automationBearerToken": "crsr_123"
+    "automationId": "68ae438f-a1fb-11f1-b532-320a589b8025",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68ae438f-a1fb-11f1-b532-320a589b8025",
+    "automationBearerToken": "Bearer crsr_473d2d10d8e77bb9a4f2219bbc0c0fbc44e2e06fc2ad335e61aa1da4a4b1d555",
+    "pool": {
+      "name": "sandbox",
+      "repos": ["calculator-app", "todo-app", "crud-app"]
+    }
+  },
+  {
+    "projectId": "16841",
+    "projectKey": "DS",
+    "automationId": "68ae438f-a1fb-11f1-b532-320a589b8025",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68ae438f-a1fb-11f1-b532-320a589b8025",
+    "automationBearerToken": "Bearer crsr_473d2d10d8e77bb9a4f2219bbc0c0fbc44e2e06fc2ad335e61aa1da4a4b1d555",
+    "pool": {
+      "name": "imcapture",
+      "repos": ["imcaptureweb", "imcaptureqc"]
+    }
   }
 ]

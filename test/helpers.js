@@ -6,8 +6,14 @@ export const TPAS_MAPPING = {
 	projectKey: 'TPAS',
 	automationId: 'abcd',
 	automationWebhookUrl: 'https://api.sh2.cursor.com/v1/abcd',
-	automationBearerToken: 'crsr_123'
+	automationBearerToken: 'crsr_123',
+	pool: {
+		name: 'sandbox',
+		repos: ['calculator-app', 'todo-app']
+	}
 };
+
+export const QUALIFIED_REPO_URL = 'https://gitlab.com/org/calculator-app';
 
 export function loadApiRequest(fileName) {
 	const url = new URL(`../api-requests/${fileName}`, import.meta.url);
@@ -21,7 +27,7 @@ export function clone(value) {
 
 export function qualifiedCommentPayload() {
 	const payload = clone(loadApiRequest('body-comment-added.json'));
-	payload.comment.body = 'Please pick this up /cursor-coding-agent';
+	payload.comment.body = `Please pick this up /cursor-coding-agent repo=${QUALIFIED_REPO_URL}`;
 	return payload;
 }
 

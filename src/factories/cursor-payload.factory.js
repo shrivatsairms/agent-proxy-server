@@ -8,7 +8,7 @@ function truncateCommand(value) {
 	return value.slice(0, COMMAND_MAX_LENGTH);
 }
 
-export function buildCursorPayload({ body = {}, query = {}, trigger }) {
+export function buildCursorPayload({ body = {}, query = {}, trigger, repoUrl, repoName }) {
 	const issue = body.issue || {};
 	const fields = issue.fields || {};
 	const project = fields.project || {};
@@ -31,6 +31,11 @@ export function buildCursorPayload({ body = {}, query = {}, trigger }) {
 	// Comments are the only trigger that needs user-provided command context.
 	if (trigger === TRIGGERS.COMMENT_COMMAND && typeof body.comment?.body === 'string') {
 		payload.command = truncateCommand(body.comment.body);
+	}
+
+	if (repoUrl && repoName) {
+		payload.repoUrl = repoUrl;
+		payload.repoName = repoName;
 	}
 
 	return payload;

@@ -24,7 +24,7 @@ cp .env.example .env
 cp data/project-automations.example.json data/project-automations.json
 ```
 
-Edit `data/project-automations.json` with real automation URLs and Bearer tokens:
+Edit `data/project-automations.json` with real automation URLs, Bearer tokens, and repo pools:
 
 ```json
 [
@@ -33,7 +33,11 @@ Edit `data/project-automations.json` with real automation URLs and Bearer tokens
     "projectKey": "TPAS",
     "automationId": "abcd",
     "automationWebhookUrl": "https://api.sh2.cursor.com/v1/abcd",
-    "automationBearerToken": "crsr_123"
+    "automationBearerToken": "crsr_123",
+    "pool": {
+      "name": "sandbox",
+      "repos": ["calculator-app", "todo-app"]
+    }
   }
 ]
 ```
@@ -76,9 +80,17 @@ The proxy still reads issue and project identity from the JSON body when those f
 
 All routes require issue type `Story` or `Bug`.
 
-- `/api/slash-commands`: `comment_created` and comment body contains `/cursor-coding-agent`
+- `/api/slash-commands`: `comment_created` and comment body contains `/cursor-coding-agent`, plus a GitLab project root `repo=https://gitlab.com/group/project` (plain text or Jira smart-link markup). The first mapping whose `pool.repos` lists that project name is invoked.
 - `/api/assignment`: created with assignee display name `Cursor`, or changelog assignee `toString` is `Cursor`
 - `/api/status-changed`: status changelog `toString` is `Ready for Dev` and labels include both `AI-Generated` and `bot-generated`
+
+Slash-command example (plain URL or a Jira smart-link chip after pasting):
+
+```
+/cursor-coding-agent repo=https://gitlab.com/group/project
+```
+
+Do not pass a tree, blob, or branch UI path such as `.../project/-/tree/main`. Missing, invalid, or unmapped repos post a tagged Jira error comment and return `202` without calling Cursor.
 
 Non-matching payloads return `202` with `forwarded: false` and do not call Cursor.
 
@@ -99,12 +111,12 @@ curl http://localhost:3000/health
 ```
 
 ```bash
-curl -X POST "http://localhost:3000/api/slash-commands?issue-key=TPAS-284&project-key=TPAS&project-id=16842" \
+curl -X POST "http://localhost:3000/api/slash-commands?issue-key=TPAS-1680&project-key=TPAS&project-id=16842&triggeredByUser=712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec" \
   -H "Content-Type: application/json" \
   -d @api-requests/body-comment-added.json
 ```
 
-The sample comment fixture uses `/cursor` and will be ignored. Use a comment body that includes `/cursor-coding-agent` to invoke an automation.
+That fixture is a live `comment_created` payload whose comment uses Jira smart-link markup around `repo=https://gitlab.com/sashetty1/calculator-app`. You can also send the same request from [`src/http/webhook.http`](src/http/webhook.http).
 
 ## Tests
 

@@ -4,6 +4,7 @@ import {
 	classifyStatusChanged
 } from '../services/event-classifier.service.js';
 import { invokeCursorAutomation } from '../services/cursor-automation.service.js';
+import { parseCommentRepo } from '../services/comment-repo.service.js';
 import { buildCursorPayload, extractIssueKey, extractProject } from '../factories/cursor-payload.factory.js';
 import { buildFailureComment, buildSuccessComment } from '../factories/jira-comment.factory.js';
 import { CURSOR_AGENT_BASE_URL, DEFAULT_CURSOR_TIMEOUT_MS, TRIGGERS } from '../config/constants.js';
@@ -53,6 +54,50 @@ async function acknowledgeSuccess(jiraCommentService, issueKey, author, agentUrl
 	log(`Success acknowledgement posted to Jira ticket ${issueKey}: ${result.status}`);
 }
 
+async function respondToCursorFailure({
+	res,
+	jiraCommentService,
+	isSlashCommand,
+	issueKey,
+	author,
+	description,
+	status,
+	automationId
+}) {
+	if (!isSlashCommand) {
+		return res.status(502).json({
+			forwarded: false,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description
+		});
+	}
+
+	try {
+		await acknowledgeFailure(jiraCommentService, issueKey, author, description, status);
+		return res.status(502).json({
+			forwarded: false,
+			acknowledged: true,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description
+		});
+	} catch (error) {
+		log(`Failed to post error acknowledgement: ${acknowledgementError(error)}`);
+		return res.status(502).json({
+			forwarded: false,
+			acknowledged: false,
+			automationId,
+			status,
+			error: 'Bad Gateway',
+			details: description,
+			acknowledgementError: acknowledgementError(error)
+		});
+	}
+}
+
 async function forwardToCursor({
 	res,
 	body,
@@ -99,6 +144,7 @@ async function forwardToCursor({
 			});
 		}
 
+		// extracting the Id of the agent that started the run
 		const agentId = result.data?.backgroundComposerId;
 		
 		if (!agentId) {
@@ -119,6 +165,7 @@ async function forwardToCursor({
 
 		try {
 			await acknowledgeSuccess(jiraCommentService, issueKey, author, agentUrl);
+			/* The actual part where we send the response back to Jira Webhook's endpoint */
 			return res.status(200).json({
 				forwarded: true,
 				acknowledged: true,
@@ -155,49 +202,7 @@ async function forwardToCursor({
 	}
 }
 
-async function respondToCursorFailure({
-	res,
-	jiraCommentService,
-	isSlashCommand,
-	issueKey,
-	author,
-	description,
-	status,
-	automationId
-}) {
-	if (!isSlashCommand) {
-		return res.status(502).json({
-			forwarded: false,
-			automationId,
-			status,
-			error: 'Bad Gateway',
-			details: description
-		});
-	}
 
-	try {
-		await acknowledgeFailure(jiraCommentService, issueKey, author, description, status);
-		return res.status(502).json({
-			forwarded: false,
-			acknowledged: true,
-			automationId,
-			status,
-			error: 'Bad Gateway',
-			details: description
-		});
-	} catch (error) {
-		log(`Failed to post error acknowledgement: ${acknowledgementError(error)}`);
-		return res.status(502).json({
-			forwarded: false,
-			acknowledged: false,
-			automationId,
-			status,
-			error: 'Bad Gateway',
-			details: description,
-			acknowledgementError: acknowledgementError(error)
-		});
-	}
-}
 
 export function createJiraWebhookController({ fetchImpl, mappingService, jiraCommentService }) {
 	// All webhook routes share orchestration while supplying their own classifier.
@@ -221,22 +226,53 @@ export function createJiraWebhookController({ fetchImpl, mappingService, jiraCom
 
 			log(`Event qualified as ${classification.trigger}`);
 
-			const mapping = mappingService.find(project);
-			if (!mapping) {
-				const reason = `No automation mapping for project ${project.projectKey || project.projectId || 'unknown'}`;
-				log(reason);
-				if (classification.trigger === TRIGGERS.COMMENT_COMMAND) {
-					await acknowledgeFailure(jiraCommentService, issueKey, body.comment?.author, reason);
-				}
-				return skipped(res, reason);
-			}
+			const isSlashCommand = classification.trigger === TRIGGERS.COMMENT_COMMAND;
+			let mapping;
+			let repoUrl;
+			let repoName;
 
-			log(`Invoking automation ${mapping.automationId}`);
+			if (isSlashCommand) {
+				const parsedRepo = parseCommentRepo(body.comment?.body);
+				if (!parsedRepo.ok) {
+					log(`Event ignored: ${parsedRepo.reason}`);
+					await acknowledgeFailure(
+						jiraCommentService,
+						issueKey,
+						body.comment?.author,
+						parsedRepo.reason
+					);
+					return skipped(res, parsedRepo.reason);
+				}
+
+				repoUrl = parsedRepo.repoUrl;
+				repoName = parsedRepo.repoName;
+				log(`Jira comment repo ${repoName}`);
+				mapping = mappingService.findByRepoName(repoName);
+				if (!mapping) {
+					const reason = `No automation mapping for repo ${repoName}`;
+					log(reason);
+					await acknowledgeFailure(jiraCommentService, issueKey, body.comment?.author, reason);
+					return skipped(res, reason);
+				}
+
+				log(`Invoking automation ${mapping.automationId} for pool ${mapping.pool.name || 'unknown'}`);
+			} else {
+				mapping = mappingService.find(project);
+				if (!mapping) {
+					const reason = `No automation mapping for project ${project.projectKey || project.projectId || 'unknown'}`;
+					log(reason);
+					return skipped(res, reason);
+				}
+
+				log(`Invoking automation ${mapping.automationId}`);
+			}
 
 			const payload = buildCursorPayload({
 				body,
 				query,
-				trigger: classification.trigger
+				trigger: classification.trigger,
+				repoUrl,
+				repoName
 			});
 
 			return forwardToCursor({

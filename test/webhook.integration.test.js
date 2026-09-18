@@ -51,7 +51,7 @@ describe('webhook integration', () => {
 			fetchImpl: async (url, options) => {
 				capturedUrl = url;
 				capturedOptions = options;
-				return new Response(JSON.stringify({ agentId: 'bc-123' }), {
+				return new Response(JSON.stringify({ backgroundComposerId: 'bc-123' }), {
 					status: 200,
 					headers: { 'Content-Type': 'application/json' }
 				});
@@ -59,7 +59,8 @@ describe('webhook integration', () => {
 		});
 
 		try {
-			const res = await postJson(app.baseUrl, '/api/slash-commands', qualifiedCommentPayload());
+			const payload = qualifiedCommentPayload();
+			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
 			assert.equal(res.status, 200);
 			const data = await res.json();
 			assert.equal(data.forwarded, true);
@@ -72,11 +73,16 @@ describe('webhook integration', () => {
 			assert.equal(capturedUrl, TPAS_MAPPING.automationWebhookUrl);
 			assert.equal(capturedOptions.headers.Authorization, 'Bearer crsr_123');
 			const outbound = JSON.parse(capturedOptions.body);
-			assert.equal(outbound.issueKey, 'TPAS-284');
+			assert.equal(outbound.issueKey, payload.issue.key);
 			assert.equal(outbound.trigger, 'comment-command');
-			assert.equal(outbound.command, 'Please pick this up /cursor-coding-agent');
-			assert.equal(outbound.summary, 'Add Subtraction Functionality to Calculator');
-			assert.equal(acknowledgement.issueKey, 'TPAS-284');
+			assert.equal(
+				outbound.command,
+				'Please pick this up /cursor-coding-agent repo=https://gitlab.com/org/calculator-app'
+			);
+			assert.equal(outbound.repoName, 'calculator-app');
+			assert.equal(outbound.repoUrl, 'https://gitlab.com/org/calculator-app');
+			assert.equal(outbound.summary, payload.issue.fields.summary);
+			assert.equal(acknowledgement.issueKey, payload.issue.key);
 			assert.equal(acknowledgement.body.content[0].content[0].attrs.id, '712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec');
 		} finally {
 			await app.close();
@@ -116,6 +122,64 @@ describe('webhook integration', () => {
 			const res = await postJson(app.baseUrl, '/api/status-changed', loadApiRequest('body-status-changed.json'));
 			assert.equal(res.status, 200);
 			assert.equal(called, true);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test('slash commands without a valid GitLab repo do not call Cursor', async () => {
+		let called = false;
+		let acknowledgement;
+		const app = await startApp({
+			jiraCommentService: {
+				addComment: async (request) => {
+					acknowledgement = request;
+					return { status: 201 };
+				}
+			},
+			fetchImpl: async () => {
+				called = true;
+				return new Response('{}', { status: 200 });
+			}
+		});
+
+		try {
+			const payload = clone(loadApiRequest('body-comment-added.json'));
+			payload.comment.body = '/cursor-coding-agent please start';
+			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
+			assert.equal(res.status, 202);
+			const data = await res.json();
+			assert.equal(data.forwarded, false);
+			assert.match(data.reason, /missing repo=/);
+			assert.equal(called, false);
+			assert.match(acknowledgement.body.content[0].content[1].text, /missing repo=/);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test('slash commands with an unmapped repo do not call Cursor', async () => {
+		let called = false;
+		const app = await startApp({
+			jiraCommentService: {
+				addComment: async () => ({ status: 201 })
+			},
+			fetchImpl: async () => {
+				called = true;
+				return new Response('{}', { status: 200 });
+			}
+		});
+
+		try {
+			const payload = clone(loadApiRequest('body-comment-added.json'));
+			payload.comment.body =
+				'/cursor-coding-agent repo=https://gitlab.com/org/unknown-app';
+			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
+			assert.equal(res.status, 202);
+			const data = await res.json();
+			assert.equal(data.forwarded, false);
+			assert.match(data.reason, /No automation mapping for repo unknown-app/);
+			assert.equal(called, false);
 		} finally {
 			await app.close();
 		}
@@ -240,7 +304,8 @@ describe('webhook integration', () => {
 					throw error;
 				}
 			},
-			fetchImpl: async () => new Response(JSON.stringify({ agentId: 'bc-456' }), { status: 200 })
+			fetchImpl: async () =>
+				new Response(JSON.stringify({ backgroundComposerId: 'bc-456' }), { status: 200 })
 		});
 
 		try {

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import path, { normalize } from 'node:path';
+import path from 'node:path';
 import { DEFAULT_MAPPING_FILE } from '../config/constants.js';
 
 /* Correct any discrepancies like mismatch in format, data-type etc in the JSON data, 
@@ -15,7 +15,11 @@ function normalizeProjectMappings(projectMappings) {
 		projectKey: record.projectKey || '',
 		automationId: record.automationId || '',
 		automationWebhookUrl: record.automationWebhookUrl || '',
-		automationBearerToken: record.automationBearerToken || ''
+		automationBearerToken: record.automationBearerToken || '',
+		pool: {
+			name: record.pool?.name || '',
+			repos: Array.isArray(record.pool?.repos) ? record.pool.repos.map(String) : []
+		}
 	}));
 }
 
@@ -28,10 +32,9 @@ function loadProjectMappingsFromFile(filePath) {
 	return normalizeProjectMappings(projectMappingsJson); 
 }
 
-/* This function returns an object with 3 things:
- * 1. `filePath`: The path to the mappings.json file relative to root of the project
- * 2. `records`: An array of jira-project to cursor-automation mapping objects
- * 3. `find`: A function that returns an the mapping object by `projectKey` if not found, then by `projectId` */
+/* Returns mapping lookup helpers:
+ * - find: by projectKey, then projectId (assignment/status webhooks)
+ * - findByRepoName: first mapping whose pool.repos lists the GitLab project name */
 export function createProjectMappingService(options = {}) {
 
 	const projectMappingsFilePath = options.filePath || process.env.PROJECT_AUTOMATIONS_FILE || DEFAULT_MAPPING_FILE;
@@ -60,9 +63,20 @@ export function createProjectMappingService(options = {}) {
 		return null;
 	}
 
+	function findByRepoName(repoName) {
+		if (!repoName) {
+			return null;
+		}
+
+		return (
+			projectMappings.find((record) => record.pool.repos.includes(repoName)) || null
+		);
+	}
+
 	return {
 		filePath: projectMappingsFilePath,
 		count: projectMappings.length,
-		find: findProjectMapping
+		find: findProjectMapping,
+		findByRepoName
 	};
 }

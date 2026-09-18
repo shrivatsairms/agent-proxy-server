@@ -11,14 +11,22 @@ const records = [
 		projectKey: 'TPAS',
 		automationId: 'abcd',
 		automationWebhookUrl: 'https://api.sh2.cursor.com/v1/abcd',
-		automationBearerToken: 'crsr_123'
+		automationBearerToken: 'crsr_123',
+		pool: {
+			name: 'sandbox',
+			repos: ['calculator-app', 'todo-app']
+		}
 	},
 	{
 		projectId: '16843',
 		projectKey: 'SHRI',
 		automationId: 'bcdef',
 		automationWebhookUrl: 'https://api.sh2.cursor.com/v1/bddef',
-		automationBearerToken: 'crsr_456'
+		automationBearerToken: 'crsr_456',
+		pool: {
+			name: 'imcapture',
+			repos: ['imcaptureweb']
+		}
 	}
 ];
 
@@ -48,5 +56,17 @@ describe('project mapping service', () => {
 		const service = createProjectMappingService({ filePath });
 		assert.equal(service.count, 2);
 		assert.equal(service.find({ projectKey: 'TPAS' }).automationId, 'abcd');
+	});
+
+	test('finds the first mapping whose pool lists the repo name', () => {
+		const service = createProjectMappingService({ records });
+		const mapping = service.findByRepoName('calculator-app');
+		assert.equal(mapping.automationId, 'abcd');
+		assert.equal(mapping.pool.name, 'sandbox');
+	});
+
+	test('returns null for an unknown repo name', () => {
+		const service = createProjectMappingService({ records });
+		assert.equal(service.findByRepoName('missing-app'), null);
 	});
 });
