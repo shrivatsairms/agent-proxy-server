@@ -4,18 +4,29 @@
     "projectKey": "TPAS",
     "automationId": "68ae438f-a1fb-11f1-b532-320a589b8025",
     "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68ae438f-a1fb-11f1-b532-320a589b8025",
-    "automationBearerToken": "Bearer crsr_473d2d10d8e77bb9a4f2219bbc0c0fbc44e2e06fc2ad335e61aa1da4a4b1d555",
+    "automationBearerToken": "Bearer crsr_c50f8b386cd584f181d33145b9cc56fc309debc0fe680a66466408b62c88c7a8",
     "pool": {
-      "name": "sandbox",
-      "repos": ["calculator-app", "todo-app", "crud-app"]
+      "name": "sandbox-1",
+      "repos": ["calculator-app", "todo-react-app"]
     }
   },
   {
-    "projectId": "16841",
+    "projectId": "16842",
+    "projectKey": "TPAS",
+    "automationId": "a827c9ba-b5d8-11f1-bb68-864e54d14197",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/a827c9ba-b5d8-11f1-bb68-864e54d14197",
+    "automationBearerToken": "Bearer crsr_c633fdcac66231ea0be294cd291db3a20649cfa3e9e6cac64b180f2c90b174ef",
+    "pool": {
+      "name": "sandbox-2",
+      "repos": ["person-crud-client", "person-crud-backend"]
+    }
+  },
+  {
+    "projectId": "10190",
     "projectKey": "DS",
-    "automationId": "68ae438f-a1fb-11f1-b532-320a589b8025",
-    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68ae438f-a1fb-11f1-b532-320a589b8025",
-    "automationBearerToken": "Bearer crsr_473d2d10d8e77bb9a4f2219bbc0c0fbc44e2e06fc2ad335e61aa1da4a4b1d555",
+    "automationId": "abc604f8-a5da-11f1-a7d1-d6b4613131ce",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/abc604f8-a5da-11f1-a7d1-d6b4613131ce",
+    "automationBearerToken": "Bearer crsr_0a5bbf5d374197387c3569f79a57a659b75ce52424fa05418b519dfa2432abba",
     "pool": {
       "name": "imcapture",
       "repos": ["imcaptureweb", "imcaptureqc"]
