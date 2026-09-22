@@ -7,7 +7,8 @@ function truncateCommand(value) {
 
 	return value.slice(0, COMMAND_MAX_LENGTH);
 }
-
+/* A utiliy function which builds a slim json payload from the Jira Webhook's request body
+ * The slim payload is then sent within the POST request to cursor automation */
 export function buildCursorPayload({ body = {}, query = {}, trigger, repoUrl, repoName }) {
 	const issue = body.issue || {};
 	const fields = issue.fields || {};

@@ -8,10 +8,14 @@ import {
 	WEBHOOK_EVENTS
 } from '../config/constants.js';
 
+/* Get the type of the Jira Issue from the Request body
+ * i.e. Bug, Story, Epic or Task etc */
 function getIssueTypeName(body) {
 	return body?.issue?.fields?.issuetype?.name;
 }
 
+/* Helper function to check if the Jira Issue is one of the allowed Type 
+ * i.e. "Story" or "Bug" or any other allowed type */ 
 function isAllowedIssueType(body) {
 	return ALLOWED_ISSUE_TYPES.includes(getIssueTypeName(body));
 }
@@ -38,10 +42,15 @@ export function classifySlashCommand(body) {
 		return { qualified: false, reason: 'wrong issue type' };
 	}
 
+	/* Check for the type of event that triggered the webhook, 
+	 * the event should be of type 'comment_created' */ 
 	if (body?.webhookEvent !== WEBHOOK_EVENTS.COMMENT_CREATED) {
 		return { qualified: false, reason: 'unexpected webhook event' };
 	}
 
+	/* Check if Jira the comment that fired the webhook, 
+	 * contains the appropriate contents to be recognised as an agent invocation command 
+	 * i.e. the comment should contain the string "/cursor-coding-agent" */
 	const commentBody = body?.comment?.body;
 	if (typeof commentBody !== 'string' || !commentBody.includes(COMMENT_COMMAND)) {
 		return { qualified: false, reason: `comment missing ${COMMENT_COMMAND}` };
