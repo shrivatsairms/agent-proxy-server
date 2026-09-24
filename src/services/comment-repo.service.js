@@ -16,12 +16,13 @@ function extractRepoName(repoUrl) {
 	return segments[segments.length - 1] || '';
 }
 
-export function parseCommentRepo(commentBody) {
+export function parseRepoNameFromJiraComment(commentBody) {
 	if (typeof commentBody !== 'string') {
 		return { ok: false, reason: 'comment missing repo=https://gitlab.com/...' };
 	}
 
 	const match = commentBody.match(GITLAB_REPO_ASSIGNMENT);
+
 	if (!match) {
 		return { ok: false, reason: 'comment missing repo=https://gitlab.com/...' };
 	}

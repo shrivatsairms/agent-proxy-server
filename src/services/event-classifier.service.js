@@ -14,30 +14,32 @@ function getIssueTypeName(body) {
 	return body?.issue?.fields?.issuetype?.name;
 }
 
-/* Helper function to check if the Jira Issue is one of the allowed Type 
- * i.e. "Story" or "Bug" or any other allowed type */ 
+/* Helper function to check if the Jira Issue is one of the allowed Type
+ * i.e. "Story" or "Bug" */
 function isAllowedIssueType(body) {
 	return ALLOWED_ISSUE_TYPES.includes(getIssueTypeName(body));
 }
 
-function changelogItems(body) {
+/* Helper function to get the Item Change Logs from the request body
+ * will contain array of objects showing different state changes of the object */
+function getIssueChangelogs(body) {
 	const items = body?.changelog?.items;
 	// Jira may omit changelog or include multiple unrelated changes in one event.
 	return Array.isArray(items) ? items : [];
 }
 
-function labels(body) {
+function getIssueLabels(body) {
 	const values = body?.issue?.fields?.labels;
 	return Array.isArray(values) ? values : [];
 }
 
 function hasRequiredLabels(body) {
-	const issueLabels = labels(body);
+	const issueLabels = getIssueLabels(body);
 	// The workflow requires both labels, not merely either label.
 	return REQUIRED_LABELS.every((label) => issueLabels.includes(label));
 }
 
-export function classifySlashCommand(body) {
+export function qualifySlashCommand(body) {
 	if (!isAllowedIssueType(body)) {
 		return { qualified: false, reason: 'wrong issue type' };
 	}
@@ -59,6 +61,7 @@ export function classifySlashCommand(body) {
 	return { qualified: true, trigger: TRIGGERS.COMMENT_COMMAND };
 }
 
+
 export function classifyAssignment(body) {
 	if (!isAllowedIssueType(body)) {
 		return { qualified: false, reason: 'wrong issue type' };
@@ -74,7 +77,7 @@ export function classifyAssignment(body) {
 
 	if (body?.webhookEvent === WEBHOOK_EVENTS.ISSUE_UPDATED) {
 		// Search every changelog item because assignee changes are not guaranteed to be first.
-		const assignedToCursor = changelogItems(body).some(
+		const assignedToCursor = getIssueChangelogs(body).some(
 			(item) => item.fieldId === 'assignee' && item.toString === CURSOR_DISPLAY_NAME
 		);
 
@@ -88,6 +91,7 @@ export function classifyAssignment(body) {
 	return { qualified: false, reason: 'unexpected webhook event' };
 }
 
+
 export function classifyStatusChanged(body) {
 	if (!isAllowedIssueType(body)) {
 		return { qualified: false, reason: 'wrong issue type' };
@@ -97,7 +101,7 @@ export function classifyStatusChanged(body) {
 		return { qualified: false, reason: 'unexpected webhook event' };
 	}
 
-	const movedToReadyForDev = changelogItems(body).some(
+	const movedToReadyForDev = getIssueChangelogs(body).some(
 		(item) => item.fieldId === 'status' && item.toString === READY_FOR_DEV_STATUS
 	);
 

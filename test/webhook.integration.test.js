@@ -23,6 +23,19 @@ async function postJson(baseUrl, pathname, body) {
 	});
 }
 
+async function waitFor(predicate, message = 'background webhook processing did not finish') {
+	const deadline = Date.now() + 1_000;
+
+	while (Date.now() < deadline) {
+		if (predicate()) {
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 5));
+	}
+
+	throw new Error(message);
+}
+
 describe('webhook integration', () => {
 	test('GET /health returns 200 OK', async () => {
 		const app = await startApp();
@@ -63,13 +76,8 @@ describe('webhook integration', () => {
 			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
 			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, true);
-			assert.equal(data.acknowledged, true);
-			assert.equal(data.automationId, 'abcd');
-			assert.equal(
-				data.agentUrl,
-				'https://cursor.com/t/okta-grp-cursor-digital-gpt/agents/bc-123'
-			);
+			assert.deepEqual(data, { accepted: true });
+			await waitFor(() => acknowledgement);
 			assert.equal(capturedUrl, TPAS_MAPPING.automationWebhookUrl);
 			assert.equal(capturedOptions.headers.Authorization, 'Bearer crsr_123');
 			const outbound = JSON.parse(capturedOptions.body);
@@ -101,6 +109,7 @@ describe('webhook integration', () => {
 		try {
 			const res = await postJson(app.baseUrl, '/api/assignment', loadApiRequest('body-item-assigned.json'));
 			assert.equal(res.status, 200);
+			await waitFor(() => capturedOptions);
 			const outbound = JSON.parse(capturedOptions.body);
 			assert.equal(outbound.trigger, 'cursor-assignment');
 			assert.equal(outbound.projectKey, 'TPAS');
@@ -121,7 +130,7 @@ describe('webhook integration', () => {
 		try {
 			const res = await postJson(app.baseUrl, '/api/status-changed', loadApiRequest('body-status-changed.json'));
 			assert.equal(res.status, 200);
-			assert.equal(called, true);
+			await waitFor(() => called);
 		} finally {
 			await app.close();
 		}
@@ -147,10 +156,10 @@ describe('webhook integration', () => {
 			const payload = clone(loadApiRequest('body-comment-added.json'));
 			payload.comment.body = '/cursor-coding-agent please start';
 			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
-			assert.equal(res.status, 202);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
-			assert.match(data.reason, /missing repo=/);
+			assert.deepEqual(data, { accepted: true });
+			await waitFor(() => acknowledgement);
 			assert.equal(called, false);
 			assert.match(acknowledgement.body.content[0].content[1].text, /missing repo=/);
 		} finally {
@@ -175,10 +184,9 @@ describe('webhook integration', () => {
 			payload.comment.body =
 				'/cursor-coding-agent repo=https://gitlab.com/org/unknown-app';
 			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
-			assert.equal(res.status, 202);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
-			assert.match(data.reason, /No automation mapping for repo unknown-app/);
+			assert.deepEqual(data, { accepted: true });
 			assert.equal(called, false);
 		} finally {
 			await app.close();
@@ -198,16 +206,16 @@ describe('webhook integration', () => {
 			const payload = clone(loadApiRequest('body-comment-added.json'));
 			payload.comment.body = 'No command here';
 			const res = await postJson(app.baseUrl, '/api/slash-commands', payload);
-			assert.equal(res.status, 202);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
+			assert.deepEqual(data, { accepted: true });
 			assert.equal(called, false);
 		} finally {
 			await app.close();
 		}
 	});
 
-	test('missing project mapping returns 202 and does not call fetch', async () => {
+	test('missing project mapping returns 200 and does not call fetch', async () => {
 		let called = false;
 		const app = await startApp({
 			mappings: [],
@@ -219,18 +227,24 @@ describe('webhook integration', () => {
 
 		try {
 			const res = await postJson(app.baseUrl, '/api/assignment', loadApiRequest('body-item-assigned.json'));
-			assert.equal(res.status, 202);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
-			assert.match(data.reason, /No automation mapping/);
+			assert.deepEqual(data, { accepted: true });
 			assert.equal(called, false);
 		} finally {
 			await app.close();
 		}
 	});
 
-	test('Cursor network errors return 502', async () => {
+	test('Cursor network errors are acknowledged before an error comment is posted', async () => {
+		let acknowledgement;
 		const app = await startApp({
+			jiraCommentService: {
+				addComment: async (request) => {
+					acknowledgement = request;
+					return { status: 201 };
+				}
+			},
 			fetchImpl: async () => {
 				throw new Error('Network error');
 			}
@@ -238,10 +252,59 @@ describe('webhook integration', () => {
 
 		try {
 			const res = await postJson(app.baseUrl, '/api/assignment', loadApiRequest('body-item-created-assigned.json'));
-			assert.equal(res.status, 502);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.error, 'Bad Gateway');
-			assert.equal(data.details, 'Network error');
+			assert.deepEqual(data, { accepted: true });
+			await waitFor(() => acknowledgement);
+			assert.match(acknowledgement.body.content[0].content[1].text, /Network error/);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test('acknowledges the request before Cursor finishes processing', async () => {
+		let resolveCursor;
+		let cursorStarted = false;
+		const cursorResponse = new Promise((resolve) => {
+			resolveCursor = resolve;
+		});
+		const app = await startApp({
+			fetchImpl: async () => {
+				cursorStarted = true;
+				return cursorResponse;
+			}
+		});
+
+		try {
+			const res = await postJson(app.baseUrl, '/api/assignment', loadApiRequest('body-item-created-assigned.json'));
+			assert.equal(res.status, 200);
+			assert.deepEqual(await res.json(), { accepted: true });
+			assert.equal(cursorStarted, true);
+
+			resolveCursor(new Response('{}', { status: 200 }));
+		} finally {
+			await app.close();
+		}
+	});
+
+	test('status-change Cursor failures create an error acknowledgement', async () => {
+		let acknowledgement;
+		const app = await startApp({
+			jiraCommentService: {
+				addComment: async (request) => {
+					acknowledgement = request;
+					return { status: 201 };
+				}
+			},
+			fetchImpl: async () => new Response('{}', { status: 503 })
+		});
+
+		try {
+			const res = await postJson(app.baseUrl, '/api/status-changed', loadApiRequest('body-status-changed.json'));
+			assert.equal(res.status, 200);
+			assert.deepEqual(await res.json(), { accepted: true });
+			await waitFor(() => acknowledgement);
+			assert.match(acknowledgement.body.content[0].content[1].text, /status 503/);
 		} finally {
 			await app.close();
 		}
@@ -261,10 +324,10 @@ describe('webhook integration', () => {
 
 		try {
 			const res = await postJson(app.baseUrl, '/api/slash-commands', qualifiedCommentPayload());
-			assert.equal(res.status, 502);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
-			assert.equal(data.acknowledged, true);
+			assert.deepEqual(data, { accepted: true });
+			await waitFor(() => acknowledgement);
 			assert.match(acknowledgement.body.content[0].content[1].text, /status 503/);
 		} finally {
 			await app.close();
@@ -285,10 +348,10 @@ describe('webhook integration', () => {
 
 		try {
 			const res = await postJson(app.baseUrl, '/api/slash-commands', qualifiedCommentPayload());
-			assert.equal(res.status, 502);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, false);
-			assert.equal(data.acknowledged, true);
+			assert.deepEqual(data, { accepted: true });
+			await waitFor(() => acknowledgement);
 			assert.match(acknowledgement.body.content[0].content[1].text, /did not include an agent ID/);
 		} finally {
 			await app.close();
@@ -310,12 +373,32 @@ describe('webhook integration', () => {
 
 		try {
 			const res = await postJson(app.baseUrl, '/api/slash-commands', qualifiedCommentPayload());
-			assert.equal(res.status, 502);
+			assert.equal(res.status, 200);
 			const data = await res.json();
-			assert.equal(data.forwarded, true);
-			assert.equal(data.acknowledged, false);
-			assert.equal(data.agentId, 'bc-456');
-			assert.match(data.agentUrl, /bc-456$/);
+			assert.deepEqual(data, { accepted: true });
+		} finally {
+			await app.close();
+		}
+	});
+
+	test('malformed webhook JSON is acknowledged without invoking Cursor', async () => {
+		let called = false;
+		const app = await startApp({
+			fetchImpl: async () => {
+				called = true;
+				return new Response('{}', { status: 200 });
+			}
+		});
+
+		try {
+			const res = await fetch(`${app.baseUrl}/api/assignment`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: '{not-json'
+			});
+			assert.equal(res.status, 200);
+			assert.deepEqual(await res.json(), { accepted: true });
+			assert.equal(called, false);
 		} finally {
 			await app.close();
 		}

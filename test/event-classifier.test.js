@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	classifyAssignment,
-	classifySlashCommand,
+	qualifySlashCommand,
 	classifyStatusChanged
 } from '../src/services/event-classifier.service.js';
 import { TRIGGERS } from '../src/config/constants.js';
@@ -10,14 +10,14 @@ import { clone, loadApiRequest, qualifiedCommentPayload } from './helpers.js';
 
 describe('event classifier', () => {
 	test('qualifies a comment that contains /cursor-coding-agent on a Story', () => {
-		const result = classifySlashCommand(qualifiedCommentPayload());
+		const result = qualifySlashCommand(qualifiedCommentPayload());
 		assert.deepEqual(result, { qualified: true, trigger: TRIGGERS.COMMENT_COMMAND });
 	});
 
 	test('ignores comments without the command substring', () => {
 		const payload = clone(loadApiRequest('body-comment-added.json'));
 		payload.comment.body = 'Please review this ticket';
-		const result = classifySlashCommand(payload);
+		const result = qualifySlashCommand(payload);
 		assert.equal(result.qualified, false);
 		assert.match(result.reason, /comment missing/);
 	});
@@ -25,7 +25,7 @@ describe('event classifier', () => {
 	test('ignores slash-command events on disallowed issue types', () => {
 		const payload = qualifiedCommentPayload();
 		payload.issue.fields.issuetype.name = 'Task';
-		const result = classifySlashCommand(payload);
+		const result = qualifySlashCommand(payload);
 		assert.deepEqual(result, { qualified: false, reason: 'wrong issue type' });
 	});
 
