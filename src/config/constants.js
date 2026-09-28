@@ -33,6 +33,16 @@ export const CURSOR_AGENT_BASE_URL =
 
 export const DEFAULT_JIRA_TIMEOUT_MS = 10000;
 
+export const JIRA_SIGNATURE_HEADER = 'x-hub-signature';
+
+export const JIRA_SIGNATURE_PREFIX = 'sha256=';
+
+// Sliding window applied to /api webhook routes; health checks are not limited.
+export const RATE_LIMIT_WINDOW_MS = 60_000;
+
+// Max no of requests that can be sent by a client within the Rate Limit Window
+export const RATE_LIMIT_MAX_REQUESTS = 100;
+
 // Capture the first GitLab URL after repo=, including Jira wiki smart-link chips.
 export const GITLAB_REPO_ASSIGNMENT = /\brepo=\[?(https:\/\/gitlab\.com\/[^|\s\]]+)/i;
 

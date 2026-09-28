@@ -4,7 +4,9 @@ import {
 	clone,
 	loadApiRequest,
 	qualifiedCommentPayload,
+	signWebhookBody,
 	startApp,
+	TEST_WEBHOOK_SECRET,
 	TPAS_MAPPING
 } from './helpers.js';
 
@@ -15,11 +17,15 @@ const query = new URLSearchParams({
 	triggeredByUser: '712020:5a54709d-39a9-45b1-9c40-1cfac54b07ec'
 });
 
-async function postJson(baseUrl, pathname, body) {
+async function postJson(baseUrl, pathname, body, { webhookSecret = TEST_WEBHOOK_SECRET } = {}) {
+	const { rawBody, signature } = signWebhookBody(body, webhookSecret);
 	return fetch(`${baseUrl}${pathname}?${query.toString()}`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body)
+		headers: {
+			'Content-Type': 'application/json',
+			'X-Hub-Signature': signature
+		},
+		body: rawBody
 	});
 }
 
@@ -391,10 +397,14 @@ describe('webhook integration', () => {
 		});
 
 		try {
+			const rawBody = '{not-json';
 			const res = await fetch(`${app.baseUrl}/api/assignment`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: '{not-json'
+				headers: {
+					'Content-Type': 'application/json',
+					'X-Hub-Signature': signWebhookBody(rawBody).signature
+				},
+				body: rawBody
 			});
 			assert.equal(res.status, 200);
 			assert.deepEqual(await res.json(), { accepted: true });

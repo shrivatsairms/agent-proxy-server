@@ -1,5 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { createApp } from '../src/app.js';
+import { computeJiraSignature } from '../src/services/webhook-signature.service.js';
+
+export const TEST_WEBHOOK_SECRET = 'test-jira-webhook-secret';
 
 export const TPAS_MAPPING = {
 	projectId: '16842',
@@ -31,7 +34,21 @@ export function qualifiedCommentPayload() {
 	return payload;
 }
 
-export async function startApp({ fetchImpl, jiraCommentService, mappings = [TPAS_MAPPING] } = {}) {
+export function signWebhookBody(body, webhookSecret = TEST_WEBHOOK_SECRET) {
+	const rawBody = typeof body === 'string' ? body : JSON.stringify(body);
+	return {
+		rawBody,
+		signature: computeJiraSignature(rawBody, webhookSecret)
+	};
+}
+
+export async function startApp({
+	fetchImpl,
+	jiraCommentService,
+	mappings = [TPAS_MAPPING],
+	webhookSecret = TEST_WEBHOOK_SECRET,
+	rateLimit
+} = {}) {
 	const mockFetch =
 		fetchImpl ||
 		(async () =>
@@ -43,7 +60,9 @@ export async function startApp({ fetchImpl, jiraCommentService, mappings = [TPAS
 	const app = createApp({
 		fetch: (...args) => mockFetch(...args),
 		jiraCommentService,
-		mappings
+		mappings,
+		webhookSecret,
+		rateLimit
 	});
 
 	const server = await new Promise((resolve) => {

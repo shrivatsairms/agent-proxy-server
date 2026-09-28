@@ -44,6 +44,8 @@ export function createProjectMappingService(options = {}) {
 		? normalizeProjectMappings(options.records)
 		: loadProjectMappingsFromFile(projectMappingsFilePath);
 
+	/* A function to get the jira-project to cursor-automation mapping object using he project-id
+	 * from the Array of Mapping Objects */
 	function findProjectMapping({ projectKey, projectId } = {}) {
 		// Project keys are human-readable and authoritative when both values are supplied.
 		if (projectKey) {
@@ -77,6 +79,6 @@ export function createProjectMappingService(options = {}) {
 		filePath: projectMappingsFilePath,
 		count: projectMappings.length,
 		find: findProjectMapping,
-		findByRepoName
+		findByRepoName // equivalent to findByRepoName: findByRepoName
 	};
 }

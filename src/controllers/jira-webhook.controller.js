@@ -221,7 +221,7 @@ export function createJiraWebhookController({ fetchImpl, mappingService, jiraCom
 		const endpoint = `${req.baseUrl}${req.path}`;
 		log(`Jira webhook received for endpoint ${endpoint}`);
 
-		/* We send a 200 OK response to Jira Webhook immediately before even processing the request,
+		/* We send a 200 OK response to Jira Webhook Immediately & Unconditionally before even processing the request,
 		 * We do this because if we encounter an error while processing and send an ERROR response(like 400 or 500),
 		 * Jira Webhook will try to resend the request again and again, this leads to unnecessary invocation of automations */
 		res.status(200).json({ accepted: true });

@@ -25,6 +25,7 @@ export function createJiraCommentService({
 	env = process.env,
 	timeoutMs = DEFAULT_JIRA_TIMEOUT_MS
 } = {}) {
+	
 	async function addComment({ issueKey, body }) {
 		const { baseUrl, email, apiToken } = getConfiguration(env);
 

@@ -3,8 +3,8 @@
     "projectId": "16842",
     "projectKey": "TPAS",
     "automationId": "68ae438f-a1fb-11f1-b532-320a589b8025",
-    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68ae438f-a1fb-11f1-b532-320a589b8025",
-    "automationBearerToken": "Bearer crsr_c50f8b386cd584f181d33145b9cc56fc309debc0fe680a66466408b62c88c7a8",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/68...",
+    "automationBearerToken": "Bearer crsr_c...",
     "pool": {
       "name": "sandbox-1",
       "repos": ["calculator-app", "todo-react-app"]
@@ -14,8 +14,8 @@
     "projectId": "16842",
     "projectKey": "TPAS",
     "automationId": "a827c9ba-b5d8-11f1-bb68-864e54d14197",
-    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/a827c9ba-b5d8-11f1-bb68-864e54d14197",
-    "automationBearerToken": "Bearer crsr_c633fdcac66231ea0be294cd291db3a20649cfa3e9e6cac64b180f2c90b174ef",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/a827...",
+    "automationBearerToken": "Bearer crsr_...",
     "pool": {
       "name": "sandbox-2",
       "repos": ["person-crud-client", "person-crud-backend"]
@@ -25,8 +25,8 @@
     "projectId": "10190",
     "projectKey": "DS",
     "automationId": "abc604f8-a5da-11f1-a7d1-d6b4613131ce",
-    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/abc604f8-a5da-11f1-a7d1-d6b4613131ce",
-    "automationBearerToken": "Bearer crsr_0a5bbf5d374197387c3569f79a57a659b75ce52424fa05418b519dfa2432abba",
+    "automationWebhookUrl": "https://api2.cursor.sh/automations/webhook/abc604f8-a5...",
+    "automationBearerToken": "Bearer crsr_0a5...",
     "pool": {
       "name": "imcapture",
       "repos": ["imcaptureweb", "imcaptureqc"]

@@ -5,6 +5,7 @@ import { log } from './utils/logger.js';
 
 /* Entry point of the app */
 
+// Loads all enviroment variable from the .env file to the app's current session
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
