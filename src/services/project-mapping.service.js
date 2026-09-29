@@ -25,7 +25,8 @@ function normalizeProjectMappings(projectMappings) {
 
 /* A function to get the Jira-Project to Cursor-Automation mapping data from the JSON file 
  * `filePath`: "/data/project-automations.json" (path relative to the root of the project) */
-function loadProjectMappingsFromFile(filePath) {
+function loadProjectMappingsFromFile() {
+	const filePath = process.env.PROJECT_AUTOMATIONS_FILE || DEFAULT_MAPPING_FILE;
 	const absFilePath = path.resolve(filePath); // get the absolute path to the mappings JSON file
 	const raw = fs.readFileSync(absFilePath, 'utf8');
 	const projectMappingsJson = JSON.parse(raw);
@@ -42,7 +43,7 @@ export function createProjectMappingService(options = {}) {
 	// Injected records avoid filesystem access in tests and ease a future database adapter.
 	const projectMappings = options.records
 		? normalizeProjectMappings(options.records)
-		: loadProjectMappingsFromFile(projectMappingsFilePath);
+		: loadProjectMappingsFromFile();
 
 	/* A function to get the jira-project to cursor-automation mapping object using he project-id
 	 * from the Array of Mapping Objects */
